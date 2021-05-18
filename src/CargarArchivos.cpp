@@ -44,24 +44,18 @@ void cargarMultiplesArchivos(
     unsigned int cantThreads,
     std::vector<std::string> filePaths
 ) {
-    // Completar (Ejercicio 4)
-    std::vector<std::string> archivosRestantes = filePaths;
-    std::mutex mutexArchivosRestantes;
+    std::atomic<int> indiceARevisar(0);
 
     std::vector<std::thread> threads(cantThreads);
 
     for (std::thread &t : threads) {
-        t = std::thread([&archivosRestantes, &mutexArchivosRestantes, &hashMap] () {
+        t = std::thread([&indiceARevisar,&filePaths, &hashMap] () {
             while (true){
-                mutexArchivosRestantes.lock();
-                if(archivosRestantes.empty()){
-                    mutexArchivosRestantes.unlock();
+                unsigned int filaARecorrer = indiceARevisar.fetch_add(1);
+                if(filaARecorrer >= filePaths.size()){
                     break;
                 }
-                std::string archivoARecorrer = archivosRestantes.back();
-                archivosRestantes.pop_back();
-                mutexArchivosRestantes.unlock();
-                cargarArchivo(hashMap,archivoARecorrer);
+                cargarArchivo(hashMap,filePaths[filaARecorrer]);
             }
         });
     }

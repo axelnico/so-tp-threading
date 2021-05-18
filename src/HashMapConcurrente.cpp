@@ -67,7 +67,9 @@ hashMapPair HashMapConcurrente::maximo() {
                 max->second = p.second;
             }
         }
-        this->mutexBuckets[index].unlock();
+    }
+    for (auto & mutexBucket : this->mutexBuckets) {
+        mutexBucket.unlock();
     }
     return *max;
 }
@@ -75,28 +77,21 @@ hashMapPair HashMapConcurrente::maximo() {
 
 
 hashMapPair HashMapConcurrente::maximoParalelo(unsigned int cant_threads) {
-    std::vector<unsigned int> filasRestantes;
-    for(int i = 0 ; i < HashMapConcurrente::cantLetras ; i ++){
-        filasRestantes.push_back(i);
-    }
-    std::mutex mutexFilasRestantes;
     hashMapPair max;
     max.second = 0;
     std::mutex mutexMaximo;
 
+    std::atomic<int> indiceARevisar(0);
+
     std::vector<std::thread> threads(cant_threads);
 
     for (std::thread &t : threads) {
-        t = std::thread([&filasRestantes, &mutexFilasRestantes,&max,&mutexMaximo,this] () {
+        t = std::thread([&indiceARevisar,&max,&mutexMaximo,this] () {
             while (true){
-                mutexFilasRestantes.lock();
-                if(filasRestantes.empty()){
-                    mutexFilasRestantes.unlock();
+                unsigned int filaARecorrer = indiceARevisar.fetch_add(1);
+                if(filaARecorrer >= HashMapConcurrente::cantLetras){
                     break;
                 }
-                unsigned int filaARecorrer = filasRestantes.back();
-                filasRestantes.pop_back();
-                mutexFilasRestantes.unlock();
                 hashMapPair maxLocal;
                 maxLocal.second = 0;
                 this->mutexBuckets[filaARecorrer].lock();
@@ -106,7 +101,6 @@ hashMapPair HashMapConcurrente::maximoParalelo(unsigned int cant_threads) {
                         maxLocal.second = p.second;
                     }
                 }
-                this->mutexBuckets[filaARecorrer].unlock();
                 mutexMaximo.lock();
                 if(maxLocal.second > max.second){
                     max.second = maxLocal.second;
@@ -118,6 +112,9 @@ hashMapPair HashMapConcurrente::maximoParalelo(unsigned int cant_threads) {
     }
     for (std::thread &t : threads) {
         t.join();
+    }
+    for (auto & mutexBucket : this->mutexBuckets) {
+        mutexBucket.unlock();
     }
     return max;
 }
