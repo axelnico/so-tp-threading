@@ -2,6 +2,7 @@
 
 #include "HashMapConcurrente.hpp"
 #include "CargarArchivos.hpp"
+#include <chrono>
 
 int main(int argc, char **argv) {
     if (argc < 4) {
@@ -27,8 +28,20 @@ int main(int argc, char **argv) {
     }
 
     HashMapConcurrente hashMap{}; // = HashMapConcurrente();
+
+    auto inicioCarga = std::chrono::steady_clock::now();
     cargarMultiplesArchivos(hashMap, cantThreadsLectura, filePaths);
+    auto finCarga = std::chrono::steady_clock::now();
+
+    auto inicioMaximo = std::chrono::steady_clock::now();
     auto maximo = hashMap.maximoParalelo(cantThreadsMaximo);
+    auto finMaximo = std::chrono::steady_clock::now();
+
+    double tiempoCarga = std::chrono::duration<double,std::milli>(finCarga - inicioCarga).count();
+    double tiempoMaximo = std::chrono::duration<double,std::milli>(finMaximo - inicioMaximo).count();
+
+    // Imprimimos el tiempo de ejecucion por stderr
+    std::clog << tiempoCarga << "-"  << tiempoMaximo  << std::endl;
 
     std::cout << maximo.first << " " << maximo.second << std::endl;
 
