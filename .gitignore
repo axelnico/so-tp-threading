@@ -32,7 +32,6 @@
 *.app
 
 # Others
-.gitignore
 *.txt
 *-checkpoint.ipynb
 *.csv
